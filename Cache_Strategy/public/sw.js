@@ -2,6 +2,7 @@
 var CACHE_STATIC_NAME = 'static-v2';
 var CACHE_DYNAMIC_NAME = 'dynamic-v1';
 const url = 'https://httpbin.org/ip';
+const DOMAIN_NAME = 'http://127.0.0.1:8080';
 const STATIC_FILES = [
   '/',
   '/index.html',
@@ -39,7 +40,12 @@ self.addEventListener('activate', function(event) {
 // Helper Function 驗證
 const isInArray = (string, array) => {
   for (let i = 0; i < array.length; i++) {
-    const element = array[i];
+    let element = array[i];
+
+    if (!element.startsWith('http')) {
+      element = `${DOMAIN_NAME}${element}`;
+    }
+
     if (element === string) return true;
   }
   return false;

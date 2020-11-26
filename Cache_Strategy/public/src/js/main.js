@@ -37,10 +37,13 @@ if ('caches' in window) {
       if (response) return response.json();
     })
     .then((data) => {
+      if (!data) return false;
       console.log('From Cache', data);
+
       if (!networkResponseRecived) {
         box.style.height = (data.origin.substr(0, 2) * 20) + 'px';
       }
+      return true;
     })
 }
 //ok 1) Identify the strategy we currently use in the Service Worker (for caching)
