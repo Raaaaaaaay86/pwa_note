@@ -1,11 +1,10 @@
-
 var CACHE_STATIC_NAME = 'static-v2';
 var CACHE_DYNAMIC_NAME = 'dynamic-v1';
 const url = 'https://httpbin.org/ip';
-const DOMAIN_NAME = 'http://127.0.0.1:8080';
 const STATIC_FILES = [
   '/',
   '/index.html',
+  '/offline.html',
   '/src/css/app.css',
   '/src/css/main.css',
   '/src/js/main.js',
@@ -37,13 +36,23 @@ self.addEventListener('activate', function(event) {
   );
 });
 
+// 控制 Cache Storage 大小
+const trimCache = async(cacheName, maxItems) => {
+  const cache = await caches.open(cacheName);
+  const keyList = await cache.keys();
+  if (keyList.length > maxItems) {
+    cache.delete(keyList[0])
+      .then(() => trimCache(cacheName, maxItems));
+  }
+};
+
 // Helper Function 驗證
 const isInArray = (string, array) => {
   for (let i = 0; i < array.length; i++) {
     let element = array[i];
 
     if (!element.startsWith('http')) {
-      element = `${DOMAIN_NAME}${element}`;
+      element = `${self.origin}${element}`;
     }
 
     if (element === string) return true;
@@ -57,6 +66,7 @@ self.addEventListener('fetch', function(event) {
       caches.open(CACHE_DYNAMIC_NAME)
         .then(async (cache) => {
           const response = await fetch(event.request);
+          trimCache(CACHE_DYNAMIC_NAME, 3);
           cache.put(event.request.url, response.clone());
           return response;
         })
@@ -74,11 +84,14 @@ self.addEventListener('fetch', function(event) {
           try {
             const response = await fetch(event.request);
             const cache = await caches.open(CACHE_DYNAMIC_NAME);
+            trimCache(CACHE_DYNAMIC_NAME, 3);
             cache.put(event.request.url, response.clone());
             return response;
           } catch (error) {
             const routingCache = await caches.open(CACHE_STATIC_NAME);
-            return routingCache.match('/index.html');
+            if (event.request.headers.get('accept').includes('text/html')) {
+              return routingCache.match('/offline.html');
+            }
           }
         })
     )

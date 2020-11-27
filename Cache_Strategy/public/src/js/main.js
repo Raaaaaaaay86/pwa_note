@@ -10,18 +10,34 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-button.addEventListener('click', function(event) {
+// 解除安裝 SW
+// if ('serviceWorker' in navigator) {
+//   const registrations = await navigator.serviceWorker.getRegistrations();
+//   registrations.forEach((registration) => registration.unregister());
+// }
+
+button.addEventListener('click', async() => {
   if (box.classList.contains('visible')) {
     box.classList.remove('visible');
   } else {
     box.classList.add('visible');
   }
+
 });
 
-const url = 'https://httpbin.org/ip';
+const url = 'https://httpbin.org/post';
 let networkResponseRecived = false;
 
-fetch('https://httpbin.org/ip')
+fetch(url, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  body: JSON.stringify({
+    message: 'Hello Ray',
+  }),
+})
   .then(function(res) {
     return res.json();
   })
