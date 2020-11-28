@@ -162,7 +162,7 @@ form.addEventListener('submit', function(event) {
         const post = {
           id: new Date().toISOString(),
           title: titleInput.value,
-          location: titleInput.value,
+          location: locationInput.value,
         };
 
         writeData('sync-posts', post)
