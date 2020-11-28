@@ -1,12 +1,15 @@
-importScripts('/src/js/index-min.js');
-const CACHE_STATIC_NAME = 'static-v17';
-const CACHE_DYNAMIC_NAME = 'dynamic-v2';
-const STATIC_FILES = [
+importScripts('/src/js/idb.js');
+importScripts('/src/js/utility.js');
+
+var CACHE_STATIC_NAME = 'static-v22';
+var CACHE_DYNAMIC_NAME = 'dynamic-v2';
+var STATIC_FILES = [
   '/',
   '/index.html',
   '/offline.html',
   '/src/js/app.js',
   '/src/js/feed.js',
+  '/src/js/idb.js',
   '/src/js/promise.js',
   '/src/js/fetch.js',
   '/src/js/material.min.js',
@@ -61,6 +64,7 @@ self.addEventListener('activate', function (event) {
 function isInArray(string, array) {
   var cachePath;
   if (string.indexOf(self.origin) === 0) { // request targets domain where we serve the page from (i.e. NOT a CDN)
+    // console.log('matched ', string);
     cachePath = string.substring(self.origin.length); // take the part of the URL AFTER the domain (e.g. after localhost:8080)
   } else {
     cachePath = string; // store the full request (for CDNs)
@@ -68,28 +72,24 @@ function isInArray(string, array) {
   return array.indexOf(cachePath) > -1;
 }
 
-const dbPromise = idb.openDB('posts-store', 1 , {
-  upgrade(db) {
-    db.createObjectStore('posts', { keyPath: 'id' });
-  }
-})
-
 self.addEventListener('fetch', function (event) {
-  const url = 'https://pwapractice-177e2.firebaseio.com/posts';
 
+  var url = 'https://pwapractice-177e2.firebaseio.com/posts';
   if (event.request.url.indexOf(url) > -1) {
-    event.respondWith(
-      fetch(event.request)
-        .then(async (res) => {
-          const clonedResJSON = await res.clone().json();
-
-          await (await dbPromise).clear('posts');
-          for (let key in clonedResJSON) {
-            await (await dbPromise).put('posts', clonedResJSON[key])
-          }
-
-          return res;
-        })
+    event.respondWith(fetch(event.request)
+      .then(function (res) {
+        var clonedRes = res.clone();
+        clearAllData('posts')
+          .then(function () {
+            return clonedRes.json();
+          })
+          .then(function (data) {
+            for (var key in data) {
+              writeData('posts', data[key])
+            }
+          });
+        return res;
+      })
     );
   } else if (isInArray(event.request.url, STATIC_FILES)) {
     event.respondWith(
@@ -98,20 +98,69 @@ self.addEventListener('fetch', function (event) {
   } else {
     event.respondWith(
       caches.match(event.request)
-        .then(async (response) => {
-          if (response) return response;
-          try {
-            const response = await fetch(event.request);
-            const cache = await caches.open(CACHE_DYNAMIC_NAME);
-            // trimCache(CACHE_DYNAMIC_NAME, 3);
-            cache.put(event.request.url, response.clone());
+        .then(function (response) {
+          if (response) {
             return response;
-          } catch (error) {
-            const cache = await caches.open(CACHE_STATIC_NAME);
-            if (event.request.headers.get('accept').includes('text/html')) {
-              return cache.match('/offline.html');
-            }
+          } else {
+            return fetch(event.request)
+              .then(function (res) {
+                return caches.open(CACHE_DYNAMIC_NAME)
+                  .then(function (cache) {
+                    // trimCache(CACHE_DYNAMIC_NAME, 3);
+                    cache.put(event.request.url, res.clone());
+                    return res;
+                  })
+              })
+              .catch(function (err) {
+                return caches.open(CACHE_STATIC_NAME)
+                  .then(function (cache) {
+                    if (event.request.headers.get('accept').includes('text/html')) {
+                      return cache.match('/offline.html');
+                    }
+                  });
+              });
           }
+        })
+    );
+  }
+});
+
+self.addEventListener('sync', (event) => {
+  console.log('[Service Worker] Background Syncing...', event);
+  if (event.tag === 'sync-new-posts') {
+    console.log('[Service Worker] Syncing new post...');
+    event.waitUntil(
+      readAllData('sync-posts')
+        .then((dataList) => {
+          dataList.forEach((data) => {
+            const { id, title, location } = data;
+
+            fetch('https://us-central1-pwapractice-177e2.cloudfunctions.net/storePostData', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+              body: JSON.stringify({
+                id,
+                title,
+                location,
+                image: 'https://firebasestorage.googleapis.com/v0/b/pwapractice-177e2.appspot.com/o/2019-08-20.jpg?alt=media&token=dca0cc16-e6fd-4fa7-a061-a2a38a5945f1',
+              }),
+            })
+              .then((res) => {
+                console.log('~/sw.js: Sent data', res);
+                if (res.ok) {
+                  res.json()
+                    .then((reaData) => {
+                      deleteItemFromData('sync-posts', reaData.id);
+                    })
+                }
+              })
+              .catch((err) => {
+                console.log('Error while sending Data', err);
+              })
+          })
         })
     );
   }
