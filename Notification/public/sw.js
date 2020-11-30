@@ -125,16 +125,13 @@ self.addEventListener('fetch', function (event) {
   }
 });
 
-// 當 Sync Manager 含有新 Sync 任務，及連線狀態正常，則觸發該 Listener
 self.addEventListener('sync', (event) => {
   console.log('[Service Worker] Background Syncing...', event);
-
-  if (event.tag === 'sync-new-posts') { // 如果當初註冊為 sw.sync.register('sync-new-posts') 則執行以下
+  if (event.tag === 'sync-new-posts') {
     console.log('[Service Worker] Syncing new post...');
-
     event.waitUntil(
-      readAllData('sync-posts') // 讀取 IndexedDB 中尚未上傳的資料
-        .then((dataList) => { // readAllData (新版插件應為 getAll())，會返回包含所有資料的陣列
+      readAllData('sync-posts')
+        .then((dataList) => {
           dataList.forEach((data) => {
             const { id, title, location } = data;
 
@@ -151,17 +148,16 @@ self.addEventListener('sync', (event) => {
                 image: 'https://firebasestorage.googleapis.com/v0/b/pwapractice-177e2.appspot.com/o/2019-08-20.jpg?alt=media&token=dca0cc16-e6fd-4fa7-a061-a2a38a5945f1',
               }),
             })
-              .then((res) => { // 上傳成功，回傳格式為 { message, id }
+              .then((res) => {
                 console.log('~/sw.js: Sent data', res);
-
-                if (res.ok) { // 再次確認 response 狀態為 ok
+                if (res.ok) {
                   res.json()
                     .then((resData) => {
-                      deleteItemFromData('sync-posts', resData.id); // 將上傳成功的資料依照回傳的 id 於 IndexedDB 刪除
+                      deleteItemFromData('sync-posts', resData.id);
                     })
                 }
               })
-              .catch((err) => { // 上傳失敗，所有未上傳資料則繼續保存
+              .catch((err) => {
                 console.log('Error while sending Data', err);
               })
           })
@@ -170,58 +166,63 @@ self.addEventListener('sync', (event) => {
   }
 });
 
-// self.addEventListener('fetch', function(event) {
-//   event.respondWith(
-//     caches.match(event.request)
-//       .then(function(response) {
-//         if (response) {
-//           return response;
-//         } else {
-//           return fetch(event.request)
-//             .then(function(res) {
-//               return caches.open(CACHE_DYNAMIC_NAME)
-//                 .then(function(cache) {
-//                   cache.put(event.request.url, res.clone());
-//                   return res;
-//                 })
-//             })
-//             .catch(function(err) {
-//               return caches.open(CACHE_STATIC_NAME)
-//                 .then(function(cache) {
-//                   return cache.match('/offline.html');
-//                 });
-//             });
-//         }
-//       })
-//   );
-// });
+self.addEventListener('notificationclick', (event) => {
+  const notification = event.notification;
+  const action = event.action;
+  console.log(notification);
 
-// self.addEventListener('fetch', function(event) {
-//   event.respondWith(
-//     fetch(event.request)
-//       .then(function(res) {
-//         return caches.open(CACHE_DYNAMIC_NAME)
-//                 .then(function(cache) {
-//                   cache.put(event.request.url, res.clone());
-//                   return res;
-//                 })
-//       })
-//       .catch(function(err) {
-//         return caches.match(event.request);
-//       })
-//   );
-// });
+  if (action === 'confirm') {
+    console.log('Confirm was chosen');
+    notification.close();
+  } else {
+    console.log(action);
+    event.waitUntil(
+      clients.matchAll() // clients.matchAll() 列出所有此 serviceWorker 正在打開的網頁
+        .then((clientList) => {
+          const client = clientList.find((c)  => c.visibilityState === 'visible'); // 找出第一個正在開啟的(visible)網頁
 
-// Cache-only
-// self.addEventListener('fetch', function (event) {
-//   event.respondWith(
-//     caches.match(event.request)
-//   );
-// });
+          if (client !== undefined) { // 如果有找到則將當前網頁導向指定網址
+            client.navigate(notification.data.url);
+            client.focus();
+          } else { // 若都沒有網頁開啟則幫使用者打開一個新的視窗或分頁，並導向指定網址
+            clients.openWindow(notification.data.url);
+          }
+          notification.close(); // 結束，關閉通知
+        })
+    );
+  }
+});
 
-// Network-only
-// self.addEventListener('fetch', function (event) {
-//   event.respondWith(
-//     fetch(event.request)
-//   );
-// });
+// notificationclose 事件對於網站分析相當重要，可以了解使用者關閉的 timestamp 或是統計何種推播通知會被忽略。
+self.addEventListener('notificationclose', (event) => {
+  console.log('Notification was closed', event);
+});
+
+self.addEventListener('push', (event) => { // 監聽從 server push 過來的通知訊息
+  console.log('Push Notification Recived', event);
+
+  let data = { // Server 回傳的 Data 範例
+    title: '',
+    content: '',
+    url: '/',
+  };
+
+  
+  if (event.data) {
+    data = JSON.parse(event.data.text());
+  }
+  
+  const options = {
+    body: data.content,
+    icon: '/src/images/icons/app-icon-96x96.png',
+    badge: '/src/images/icons/app-icon-96x96.png',
+    data: {
+      url: data.openUrl,
+    },
+  }
+
+  console.log('options', options)
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  )
+});

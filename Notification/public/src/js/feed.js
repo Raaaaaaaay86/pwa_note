@@ -156,8 +156,6 @@ form.addEventListener('submit', function(event) {
 
   closeCreatePostModal();
 
-  // 如果瀏覽器支援 serviceWorker 和 SyncManager，
-  // 則將預上傳資料先存進 IndexedDB，並註冊 SyncManager。
   if ('serviceWorker' in navigator && 'SyncManager' in window) {
     navigator.serviceWorker.ready
       .then(async (sw) => {
@@ -167,20 +165,20 @@ form.addEventListener('submit', function(event) {
           location: locationInput.value,
         };
 
-        writeData('sync-posts', post) // 將 post 寫進 indexedDB 的 'sync-posts'
+        writeData('sync-posts', post)
           .then(() => {
-            sw.sync.register('sync-new-posts'); // 於 SyncManager 註冊新 sync 事件
+            sw.sync.register('sync-new-posts');
           })
-          .then(() => { // 操控畫面，無關 Background Sync
+          .then(() => {
             const snackbarContainer = document.getElementById('confirmation-toast');
-            const data = { message: "You're post was saved for syncing!" };
+            const data = { message: "You're post was saved fro syncing!" };
             snackbarContainer.MaterialSnackbar.showSnackbar(data);
           })
           .catch((err) => {
             console.log(err);
           })
       })
-  } else { // 若無支援 ServiceWorker 和 SyncManager，則直接傳送。
+  } else {
     sendData();
   }
 });
