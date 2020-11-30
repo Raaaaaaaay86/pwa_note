@@ -127,8 +127,10 @@ self.addEventListener('fetch', function (event) {
 
 self.addEventListener('sync', (event) => {
   console.log('[Service Worker] Background Syncing...', event);
+
   if (event.tag === 'sync-new-posts') {
     console.log('[Service Worker] Syncing new post...');
+
     event.waitUntil(
       readAllData('sync-posts')
         .then((dataList) => {
@@ -207,11 +209,11 @@ self.addEventListener('push', (event) => { // 監聽從 server push 過來的通
     url: '/',
   };
 
-  
+
   if (event.data) {
     data = JSON.parse(event.data.text());
   }
-  
+
   const options = {
     body: data.content,
     icon: '/src/images/icons/app-icon-96x96.png',
@@ -223,6 +225,6 @@ self.addEventListener('push', (event) => { // 監聽從 server push 過來的通
 
   console.log('options', options)
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(data.title, options) // 由 serviceWorker 推播的通知
   )
 });

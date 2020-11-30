@@ -51,18 +51,17 @@ const displayConfirmNotification = async () => {
 const confirgurePushSub = async() => {
   if (!('serviceWorker' in navigator)) return;
   const swRegistration = await navigator.serviceWorker.ready;
-  const subscription = await swRegistration.pushManager.getSubscription();
-  const vapidPublicKey = 'BDg0bQCtMT7Bk6gg1SoAyagjW6At4TxAsrvfn4Rhn_RHfFU8cScr1HhXcAsL4nj8wLnmy9STlfa7wWTriAP8oI8';
-  const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+  const subscription = await swRegistration.pushManager.getSubscription(); // 返回一個 Promise，嘗試獲取已有個推播訂閱
+  const vapidPublicKey = 'BDg0bQCtMT7Bk6gg1SoAyagjW6At4TxAsrvfn4Rhn_RHfFU8cScr1HhXcAsL4nj8wLnmy9STlfa7wWTriAP8oI8'; // 由 web-push 產生的 PublicKey
+  const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey); // urlBase64ToUint8Array() 為 web-push 所提供的轉換函式
 
-  if (subscription === null) {
-    // Create a new subscription
-    const newSub = await swRegistration.pushManager.subscribe({
+  if (subscription === null) { // 若不存在已有的推播訂閱，則返回 null
+    const newSub = await swRegistration.pushManager.subscribe({ // 建立推播訂閱
       userVisibleOnly: true,
       applicationServerKey: convertedVapidKey,
     });
 
-    try {
+    try { // 將訂閱資訊上傳至 server，方便日後 server 推播時可以查看有哪些訂閱用戶
       const fetchResponse = await fetch('https://pwapractice-177e2.firebaseio.com/subscriptions.json', {
         method: 'POST',
         headers: {
@@ -83,14 +82,15 @@ const confirgurePushSub = async() => {
   }
 };
 
-const askForNotificationPermission = () => {
+const askForNotificationPermission = () => { // 第一次到此網站，若要推播通知給用戶，必須要做詢問動作。
   Notification.requestPermission((result) => {
     console.log('User Choice', result);
     if (result !== 'granted') return console.log('No notification permission granted!');
 
     confirgurePushSub();
     // displayConfirmNotification();
-    //如果接受，則隱藏按鈕
+
+    //如果接受，則隱藏按鈕 (操控畫面)
     enableNotificationsBtn.forEach((btn) => {
       btn.style.display = 'none';
       btn.removeEventListener('click', askForNotificationPermission);
@@ -98,6 +98,7 @@ const askForNotificationPermission = () => {
   })
 }
 
+// 操控畫面
 if ('Notification' in window && 'serviceWorker' in navigator) {
   enableNotificationsBtn.forEach((btn) => {
     if (Notification.permission !== 'granted') {

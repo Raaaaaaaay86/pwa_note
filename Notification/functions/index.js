@@ -18,16 +18,19 @@ exports.storePostData = functions.https.onRequest(async (request, response) => {
 
     try {
       await admin.database().ref('posts').push(request.body);
-      webpush.setVapidDetails(
+
+      // 新增 post 後，同時也推播通知
+      webpush.setVapidDetails( // 設定 VapidKey 設定
         'mailto: mirror46258@gmail.com',
-        'BDg0bQCtMT7Bk6gg1SoAyagjW6At4TxAsrvfn4Rhn_RHfFU8cScr1HhXcAsL4nj8wLnmy9STlfa7wWTriAP8oI8',
-        'EFJ4V8BhJ_hhzZ0qfOHKAuVs7IhHl6cRdY0DB6bjroU',
+        'BDg0bQCtMT7Bk6gg1SoAyagjW6At4TxAsrvfn4Rhn_RHfFU8cScr1HhXcAsL4nj8wLnmy9STlfa7wWTriAP8oI8', // WebPush PublicKey
+        'EFJ4V8BhJ_hhzZ0qfOHKAuVs7IhHl6cRdY0DB6bjroU', // WebPush PrivateKey
       );
 
       const subscriptions = await admin.database().ref('subscriptions').once('value');
-      subscriptions.forEach((sub) => {
+
+      subscriptions.forEach((sub) => { // 對所有訂閱用戶發送資料
         const { endpoint, keys } = sub.val();
-        const pushConfig = {
+        const pushConfig = { // webPush 設定
           endpoint,
           keys: {
             auth: keys.auth,
@@ -47,6 +50,5 @@ exports.storePostData = functions.https.onRequest(async (request, response) => {
     } catch (error) {
       response.status(500).json({ error });
     }
-
   })
 });
