@@ -63,20 +63,21 @@ self.addEventListener('fetch', function (event) {
 
   var url = 'https://pwapractice-177e2.firebaseio.com/posts';
   if (event.request.url.indexOf(url) > -1) {
-    event.respondWith(fetch(event.request)
-      .then(function (res) {
-        var clonedRes = res.clone();
-        clearAllData('posts')
-          .then(function () {
-            return clonedRes.json();
-          })
-          .then(function (data) {
-            for (var key in data) {
-              writeData('posts', data[key])
-            }
-          });
-        return res;
-      })
+    event.respondWith(
+      fetch(event.request)
+        .then(function (res) {
+          var clonedRes = res.clone();
+          clearAllData('posts')
+            .then(function () {
+              return clonedRes.json();
+            })
+            .then(function (data) {
+              for (var key in data) {
+                writeData('posts', data[key])
+              }
+            });
+          return res;
+        })
     );
   } else if (isInArray(event.request.url, STATIC_FILES)) {
     event.respondWith(

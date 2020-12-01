@@ -13,7 +13,7 @@ const imagePicker = document.getElementById('image-picker');
 const imagePickerArea = document.getElementById('pick-image');
 const locationBtn = document.getElementById('location-btn');
 const locationLoader = document.getElementById('location-loader');
-let fetchLocation = {lat: 0, lng: 0};
+let fetchedLocation = {lat: 0, lng: 0};
 let picture = null;
 
 locationBtn.addEventListener('click', (event) => {
@@ -205,6 +205,7 @@ var networkDataReceived = false;
 
 fetch(url)
   .then(function(res) {
+    console.log('rrrrrr', res);
     return res.json();
   })
   .then(function(data) {

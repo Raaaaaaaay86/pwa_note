@@ -8,7 +8,7 @@ if (!window.Promise) {
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker
-    .register('/sw.js')
+    .register('/service-worker.js')
     .then(function () {
       console.log('Service worker registered!');
     })
@@ -63,7 +63,7 @@ function configurePushSub() {
     .then(function(sub) {
       if (sub === null) {
         // Create a new subscription
-        var vapidPublicKey = 'BKapuZ3XLgt9UZhuEkodCrtnfBo9Smo-w1YXCIH8YidjHOFAU6XHpEnXefbuYslZY9vtlEnOAmU7Mc-kWh4gfmE';
+        var vapidPublicKey = 'BDg0bQCtMT7Bk6gg1SoAyagjW6At4TxAsrvfn4Rhn_RHfFU8cScr1HhXcAsL4nj8wLnmy9STlfa7wWTriAP8oI8';
         var convertedVapidPublicKey = urlBase64ToUint8Array(vapidPublicKey);
         return reg.pushManager.subscribe({
           userVisibleOnly: true,
